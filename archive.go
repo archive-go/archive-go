@@ -22,14 +22,18 @@ func init() {
 
 // Save 是一个备份函数，将链接内的文本抓取然后备份到Telegraph，然后返回一个Telegraph链接。
 func Save(updateText string, token string, attachInfo *telegraph.NodeElement) (msg string, err error) {
-	linkRegExp, _ := regexp.Compile(`(http.*)\s?`)
+	linkRegExp := regexp.MustCompile(`(http.*?)\s`)
 
 	replyMessage := ""
 	// 如果能匹配到某个链接
 	// TODO 没有考虑到文章中有多个链接的可能，只是匹配了第一个
 	if linkRegExp.MatchString(updateText) {
 		// 拿到链接，但有可能是个错误的链接。
-		link := linkRegExp.FindString(updateText)
+
+		fmt.Println("updateText", updateText)
+		// Could be multi link inside the struct[][]string.
+		matchURL := linkRegExp.FindAllSubmatch([]byte(updateText), -1)
+		link := string(matchURL[0][1])
 
 		page := &telegraph.Page{
 			AccessToken: token,
