@@ -103,7 +103,6 @@ func getSingleAnswer(url string, page *telegraph.Page) error {
 	var err error
 	// Set error handler
 	spider.OnError(func(r *colly.Response, wrong error) {
-		fmt.Println("Request URL:", r.Request.URL, "failed with response:", "\nError:", wrong)
 		err = wrong
 	})
 
@@ -154,7 +153,6 @@ func getSingleZhuanLan(url string, page *telegraph.Page) error {
 	var err error
 	// Set error handler
 	spider.OnError(func(r *colly.Response, wrong error) {
-		fmt.Println("Request URL:", r.Request.URL, "failed with response:", "\nError:", wrong)
 		err = wrong
 	})
 

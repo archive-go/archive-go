@@ -1,6 +1,7 @@
 package archive
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -22,18 +23,27 @@ func init() {
 
 // Save 是一个备份函数，将链接内的文本抓取然后备份到Telegraph，然后返回一个Telegraph链接。
 func Save(updateText string, token string, attachInfo *telegraph.NodeElement) (msg string, err error) {
+	// 手动给文本尾部增加一个空格。因为还不确定如何匹配文本中只有一个链接的字符串。
+	// #HELP
+	updateText += " "
+
 	linkRegExp := regexp.MustCompile(`(http.*?)\s`)
 
-	replyMessage := ""
 	// 如果能匹配到某个链接
 	// TODO 没有考虑到文章中有多个链接的可能，只是匹配了第一个
 	if linkRegExp.MatchString(updateText) {
+		replyMessage := ""
 		// 拿到链接，但有可能是个错误的链接。
 
-		fmt.Println("updateText", updateText)
-		// Could be multi link inside the struct[][]string.
 		matchURL := linkRegExp.FindAllSubmatch([]byte(updateText), -1)
 		link := string(matchURL[0][1])
+
+		// 如果是 telegra.ph http://archive.org/ https://archive.is/ 的链接，那么就不需要备份了。
+		isArchived := regexp.MustCompile(`telegra\.ph|archive\.`)
+
+		if isArchived.MatchString(link) {
+			return "", errors.New("备份链接是telegra.ph|archive.org...链接，因此不需要备份")
+		}
 
 		page := &telegraph.Page{
 			AccessToken: token,
@@ -43,7 +53,6 @@ func Save(updateText string, token string, attachInfo *telegraph.NodeElement) (m
 		}
 
 		var err error
-		fmt.Println(link)
 
 		if zhihu.IsZhihuLink(link) {
 			color.Green("监测到知乎链接")
@@ -65,8 +74,11 @@ func Save(updateText string, token string, attachInfo *telegraph.NodeElement) (m
 		if err != nil {
 			return "", err
 		}
+
+		return replyMessage, nil
 	}
-	return replyMessage, nil
+
+	return "", errors.New("没有检测到链接")
 }
 
 // Text 是一个备份函数，将传递过来的文本备份到Telegraph，不管里面有没有链接，全部当成文本备份
@@ -82,7 +94,6 @@ func Text(updateText string, token string) (msg string, err error) {
 
 	link, err := page.CreatePage()
 	if err != nil {
-		fmt.Println("保存文章失败", err)
 		return "", err
 	}
 

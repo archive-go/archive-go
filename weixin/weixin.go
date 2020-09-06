@@ -35,13 +35,10 @@ func getContent(url string, data *telegraph.Page) error {
 		// 标题
 		dom.Find("body #js_article #activity-name").Each(func(_ int, s *goquery.Selection) {
 			data.Title = s.Text()
-			fmt.Println("title: ", data.Title)
 		})
 
 		dom.Find("body #js_article #js_name").Each(func(_ int, s *goquery.Selection) {
 			data.AuthorName = s.Text()
-
-			fmt.Println("AuthorName: ", data.AuthorName)
 		})
 
 		dom.Find("body #js_article #js_content").Each(func(_ int, s *goquery.Selection) {
@@ -56,11 +53,9 @@ func getContent(url string, data *telegraph.Page) error {
 	var err error
 	// Set error handler
 	spider.OnError(func(r *colly.Response, wrong error) {
-		fmt.Println("Request URL:", r.Request.URL, "failed with response:", "\nError:", wrong)
 		err = wrong
 	})
 
-	fmt.Println("visit:", url)
 	spider.Visit(url)
 
 	return err

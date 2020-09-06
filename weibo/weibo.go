@@ -84,7 +84,6 @@ func getSingleStatus(url string, data *telegraph.Page) error {
 	var err error
 	// Set error handler
 	spider.OnError(func(r *colly.Response, wrong error) {
-		fmt.Println("Request URL:", r.Request.URL, "failed with response:", "\nError:", wrong)
 		err = wrong
 	})
 
