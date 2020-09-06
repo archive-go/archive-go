@@ -2,7 +2,6 @@ package archive
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"regexp"
 
