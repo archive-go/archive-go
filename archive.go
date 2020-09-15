@@ -21,7 +21,7 @@ func init() {
 }
 
 // Save 是一个备份函数，将链接内的文本抓取然后备份到Telegraph，然后返回一个Telegraph链接。
-func Save(updateText string, token string, attachInfo *telegraph.NodeElement) (msg string, err error) {
+func Save(updateText string, token string, attachInfo *telegraph.NodeElement, more *More) (msg string, err error) {
 	// 手动给文本尾部增加一个空格。因为还不确定如何匹配文本中只有一个链接的字符串。
 	// #HELP
 	updateText += " "
@@ -66,6 +66,11 @@ func Save(updateText string, token string, attachInfo *telegraph.NodeElement) (m
 			color.Green("监测到微信链接")
 			replyMessage, err = weixin.Save(link, page)
 		} else {
+			if !more.IncludeAll {
+				// 如果不包含所有的链接，也就是不处理未适配的链接
+				return "", errors.New("不处理未适配的链接")
+			}
+
 			color.Green("未适配该链接，走通用逻辑")
 			replyMessage, err = common.Save(link, page)
 		}
