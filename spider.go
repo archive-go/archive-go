@@ -43,7 +43,7 @@ func CrawlByRod(url string) (html string, err error) {
 		cancel()
 	}()
 	//如果是微博 ， 处理跳转问题
-	if rs := strings.Contains(url , "weibo") ; rs{
+	if rs := strings.Contains(url, "weibo"); rs {
 		pageWithCancel.MustWait("document.querySelectorAll('div').length > 10 ")
 	}
 	html, err = pageWithCancel.MustWaitLoad().HTML()
