@@ -2,6 +2,7 @@ package archive
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/go-rod/rod"
@@ -35,11 +36,16 @@ func CrawlByRod(url string) (html string, err error) {
 	page := browser.MustPage(url)
 	ctx, cancel := context.WithCancel(context.Background())
 	pageWithCancel := page.Context(ctx)
+
 	go func() {
-		time.Sleep(10 * time.Second)
+		time.Sleep(20 * time.Second)
 		Warning.Printf("Rod 爬虫超时，URL：%s\n", url)
 		cancel()
 	}()
+	//如果是微博 ， 处理跳转问题
+	if rs := strings.Contains(url , "weibo") ; rs{
+		pageWithCancel.MustWait("document.querySelectorAll('div').length > 10 ")
+	}
 	html, err = pageWithCancel.MustWaitLoad().HTML()
 	if err != nil {
 		Warning.Printf("Rod 爬虫出错，URL：%s，错误信息：%s\n", url, err.Error())
