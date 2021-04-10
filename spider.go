@@ -1,7 +1,9 @@
 package archive
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -25,23 +27,23 @@ func init() {
 		Set("--no-zygote").
 		Set("--single-process").
 		MustLaunch()
-
+	fmt.Println("_________________init__________________")
 	browser = rod.New().ControlURL(u).MustConnect()
 }
 
 // Crawl 假设目标网页为静态资源，获取网页HTML
-func Crawl(url string) (html []byte) {
+func Crawl(url string) (htmlReader *bytes.Reader, err error) {
 	spider := colly.NewCollector()
 	extensions.RandomUserAgent(spider)
 	extensions.Referer(spider)
 
 	spider.OnResponse(func(res *colly.Response) {
-		html = res.Body
+		htmlReader = bytes.NewReader(res.Body)
 	})
 
-	// Set error handler
-	spider.OnError(func(r *colly.Response, err error) {
-		Error.Printf("Colly 爬虫出错，URL： %s， 错误信息：%s\n", url, err.Error())
+	spider.OnError(func(r *colly.Response, _err error) {
+		Error.Printf("Colly 爬虫出错，URL： %s ， 错误信息：%s\n", url, _err.Error())
+		err = _err
 	})
 
 	spider.Visit(url)
@@ -49,7 +51,7 @@ func Crawl(url string) (html []byte) {
 	return
 }
 
-func CrawlByRod(url string) (html string, err error) {
+func CrawlByRod(url string) (htmlReader *strings.Reader, err error) {
 	var page *rod.Page
 	page, err = browser.Page(proto.TargetCreateTarget{URL: url})
 	if err != nil {
@@ -63,6 +65,7 @@ func CrawlByRod(url string) (html string, err error) {
 		Warning.Printf("Rod 爬虫超时，URL：%s\n", url)
 		cancel()
 	}()
+
 	//如果是微博 ， 处理跳转问题
 	if rs := strings.Contains(url, "weibo"); rs {
 		err = pageWithCancel.Wait(nil, "document.querySelectorAll('div').length > 10 ", nil)
@@ -76,9 +79,13 @@ func CrawlByRod(url string) (html string, err error) {
 		return
 	}
 
+	var html string
 	html, err = pageWithCancel.HTML()
 	if err != nil {
-		Warning.Printf("Rod 爬虫出错，URL：%s，错误信息：%s\n", url, err.Error())
+		Warning.Printf("Rod 爬虫出错，URL：%s ，错误信息：%s\n", url, err.Error())
+		return
 	}
+	htmlReader = strings.NewReader(html)
+
 	return
 }

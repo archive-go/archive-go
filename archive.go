@@ -1,67 +1,38 @@
 package archive
 
 import (
-	"bytes"
-	"errors"
-	"strings"
-	"sync"
+	"io"
 
 	readability "github.com/go-shiori/go-readability"
 )
 
-func Go(urls []string) (rs []readability.Article, err error) {
+func Go(url string) (article readability.Article, err error) {
+	var htmlReader io.Reader
 
-	if len(urls) > 100 {
-		err = errors.New("数组长度最大为100")
-		return rs, err
-	}
-
-	var article readability.Article
-
-	wg := sync.WaitGroup{}
-	wg.Add(len(urls))
-
-	chanArticleItem := make(chan readability.Article)
-
-	for _, value := range urls {
-
-		go func(urlItem string) {
-			html := Crawl(urlItem)
-			htmlReader := bytes.NewReader(html)
-			article, err = readability.FromReader(htmlReader, urlItem)
-			if err != nil {
-				Error.Fatalf("failed to parse %s: %v\n", urlItem, err)
-			}
-
-			if article.Content == "" {
-				Info.Println("静态页面获取失败，尝试动态页面获取", urlItem)
-				// 如果静态页面的方式没获取到正文，说明是动态页面。
-				html2, err := CrawlByRod(urlItem)
-				if err != nil {
-					Error.Printf("动态获取页面%s 出错，错误信息：%s\n", html2, err.Error())
-				}
-				htmlReader := strings.NewReader(html2)
-				article, err = readability.FromReader(htmlReader, urlItem)
-				if err != nil {
-					Error.Fatalf("failed to parse %s: %v\n", urlItem, err)
-				}
-			}
-
-			chanArticleItem <- article
-
-		}(value)
-	}
-
-	go func() {
-		for i := range chanArticleItem {
-			rs = append(rs, i)
-			wg.Done()
+	htmlReader, err = Crawl(url)
+	if err != nil {
+		Error.Printf("爬取页面出错：%s , 错误信息：%s", url, err.Error())
+	} else {
+		// 只有在静态爬虫没出错的情况下才尝试解析HTML
+		article, err = readability.FromReader(htmlReader, url)
+		if err != nil {
+			Error.Printf("failed to parse %s : %v\n", url, err)
 		}
-	}()
+	}
 
-	wg.Wait()
+	if article.Content == "" {
+		Info.Println("静态页面获取失败，尝试动态页面获取", url)
+		// 如果静态页面的方式没获取到正文，说明是动态页面。
+		htmlReader, err = CrawlByRod(url)
+		if err != nil {
+			Error.Printf("动态获取页面%s 出错，错误信息：%s\n", url, err.Error())
+			return
+		}
+		article, err = readability.FromReader(htmlReader, url)
+		if err != nil {
+			Error.Printf("failed to parse %s : %v\n", url, err)
+		}
+	}
 
-	close(chanArticleItem)
-
-	return rs, nil
+	return
 }
