@@ -19,7 +19,7 @@ func TestGo(t *testing.T) {
 		wg.Add(1)
 		go func(link string) {
 			defer wg.Done()
-			article := Go(link)
+			article, _ := Go(link)
 			// fmt.Printf("URL   : %s\n", link)
 			// fmt.Printf("Title   : %s\n", article.Title)
 			// fmt.Printf("Author  : %s\n", article.Byline)
