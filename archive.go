@@ -22,7 +22,7 @@ func Go(url string) *readability.Article {
 		// 如果静态页面的方式没获取到正文，说明是动态页面。
 		html2, err := CrawlByRod(url)
 		if err != nil {
-			Error.Printf("动态获取页面%s 出错，错误信息：%s\n", html2, err.Error())
+			Error.Printf("动态获取页面%s 出错，错误信息：%s\n", url, err.Error())
 		}
 		htmlReader := strings.NewReader(html2)
 		article, err = readability.FromReader(htmlReader, url)

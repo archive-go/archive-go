@@ -6,11 +6,28 @@ import (
 	"time"
 
 	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/proto"
 	"github.com/gocolly/colly"
 	"github.com/gocolly/colly/extensions"
 )
 
-var browser = rod.New().MustConnect()
+var browser *rod.Browser
+
+func init() {
+	u := launcher.New().
+		Set("--headless").
+		Set("--disable-gpu").
+		Set("--disable-dev-shm-usage").
+		Set("--disable-setuid-sandbox").
+		Set("--no-first-run").
+		Set("--no-sandbox").
+		Set("--no-zygote").
+		Set("--single-process").
+		MustLaunch()
+
+	browser = rod.New().ControlURL(u).MustConnect()
+}
 
 // Crawl 假设目标网页为静态资源，获取网页HTML
 func Crawl(url string) (html []byte) {
@@ -24,7 +41,7 @@ func Crawl(url string) (html []byte) {
 
 	// Set error handler
 	spider.OnError(func(r *colly.Response, err error) {
-		Error.Fatalf("Colly 爬虫出错，URL： %s， 错误信息：%s\n", url, err.Error())
+		Error.Printf("Colly 爬虫出错，URL： %s， 错误信息：%s\n", url, err.Error())
 	})
 
 	spider.Visit(url)
@@ -33,7 +50,11 @@ func Crawl(url string) (html []byte) {
 }
 
 func CrawlByRod(url string) (html string, err error) {
-	page := browser.MustPage(url)
+	var page *rod.Page
+	page, err = browser.Page(proto.TargetCreateTarget{URL: url})
+	if err != nil {
+		return
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	pageWithCancel := page.Context(ctx)
 
@@ -44,9 +65,18 @@ func CrawlByRod(url string) (html string, err error) {
 	}()
 	//如果是微博 ， 处理跳转问题
 	if rs := strings.Contains(url, "weibo"); rs {
-		pageWithCancel.MustWait("document.querySelectorAll('div').length > 10 ")
+		err = pageWithCancel.Wait(nil, "document.querySelectorAll('div').length > 10 ", nil)
+		if err != nil {
+			return
+		}
 	}
-	html, err = pageWithCancel.MustWaitLoad().HTML()
+	err = pageWithCancel.WaitLoad()
+	if err != nil {
+		Error.Println("WaitLoad 出错，页面URL：", url)
+		return
+	}
+
+	html, err = pageWithCancel.HTML()
 	if err != nil {
 		Warning.Printf("Rod 爬虫出错，URL：%s，错误信息：%s\n", url, err.Error())
 	}
